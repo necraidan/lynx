@@ -1,0 +1,34 @@
+---
+import type { CollectionEntry } from 'astro:content';
+interface Props { example: CollectionEntry<'examples'>['data'] }
+const { example: e } = Astro.props;
+const meta = [e.director, e.year].filter(Boolean).join(' · ');
+---
+<figure class="clip">
+  <video src={e.media} poster={e.poster} muted loop playsinline preload="none"></video>
+  <figcaption>
+    <strong>{e.source}</strong>
+    {meta && <span class="muted"> — {meta}</span>}
+    {e.dp && <div class="muted small">DP : {e.dp}</div>}
+  </figcaption>
+</figure>
+<style>
+  .clip { margin:0; background:var(--card); border:1px solid var(--line); border-radius:8px; overflow:hidden }
+  video { display:block; width:100%; aspect-ratio:16/9; background:#000; object-fit:cover }
+  figcaption { padding:10px 12px; font-size:14px }
+  .small { font-size:12px }
+</style>
+<script>
+  // Lecture au survol, pause en sortie. Chargement différé via IntersectionObserver.
+  const io = new IntersectionObserver((entries) => {
+    for (const en of entries) {
+      const v = en.target as HTMLVideoElement;
+      if (en.isIntersecting && v.preload === 'none') v.preload = 'metadata';
+    }
+  });
+  document.querySelectorAll<HTMLVideoElement>('.clip video').forEach((v) => {
+    io.observe(v);
+    v.parentElement!.addEventListener('mouseenter', () => v.play().catch(() => {}));
+    v.parentElement!.addEventListener('mouseleave', () => { v.pause(); v.currentTime = 0; });
+  });
+</script>

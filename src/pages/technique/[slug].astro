@@ -1,0 +1,52 @@
+---
+import { getCollection, getEntries, render } from 'astro:content';
+import Base from '../../layouts/Base.astro';
+import Clip from '../../components/Clip.astro';
+import { CATEGORY_LABELS } from '../../data/categories';
+
+export async function getStaticPaths() {
+  const techniques = await getCollection('techniques');
+  return techniques.map((t) => ({ params: { slug: t.id }, props: { technique: t } }));
+}
+
+const { technique: t } = Astro.props;
+const { Content } = await render(t);
+const examples = (await getCollection('examples', (e) => e.data.techniques.some((r) => r.id === t.id)))
+  .sort((a, b) => (a.data.year ?? 0) - (b.data.year ?? 0));
+const related = await getEntries(t.data.related);
+---
+<Base title={t.data.name} description={t.data.summary}>
+  <p><a href="/" class="muted">← Toutes les techniques</a></p>
+  <header class="head">
+    <span class="chip">{CATEGORY_LABELS[t.data.category]}</span>
+    <h1>{t.data.name}</h1>
+    {t.data.aliases.length > 0 && <p class="muted">Aussi appelé : {t.data.aliases.join(', ')}</p>}
+    <p class="lead">{t.data.summary}</p>
+    <div class="body"><Content /></div>
+  </header>
+
+  <section>
+    <h2>Exemples <span class="muted">({examples.length})</span></h2>
+    {examples.length === 0
+      ? <p class="muted">Pas encore d'exemple. Ajoute-en dans <code>src/data/examples.json</code>.</p>
+      : <div class="grid">{examples.map((e) => <Clip example={e.data} />)}</div>}
+  </section>
+
+  {related.length > 0 && (
+    <section>
+      <h2>Techniques liées</h2>
+      <ul class="related">
+        {related.map((r) => <li><a href={`/technique/${r.id}/`}>{r.data.name}</a> <span class="muted">— {r.data.summary}</span></li>)}
+      </ul>
+    </section>
+  )}
+</Base>
+<style>
+  .head { margin-bottom:40px }
+  h1 { margin:8px 0 4px; font-size:40px }
+  .lead { font-size:20px; max-width:70ch }
+  .body { max-width:70ch; color:#c8c8cf }
+  section { margin-top:40px }
+  .related { list-style:none; padding:0; display:grid; gap:8px }
+  .related a { color:var(--accent) }
+</style>

@@ -1,0 +1,60 @@
+[
+  {
+    "id": "vertigo-tower",
+    "techniques": ["dolly-zoom"],
+    "media": "/media/placeholder.mp4",
+    "source": "Vertigo",
+    "type": "film",
+    "director": "Alfred Hitchcock",
+    "dp": "Robert Burks",
+    "year": 1958,
+    "credit": "Paramount Pictures"
+  },
+  {
+    "id": "jaws-beach",
+    "techniques": ["dolly-zoom", "dolly-shot"],
+    "media": "/media/placeholder.mp4",
+    "source": "Jaws",
+    "type": "film",
+    "director": "Steven Spielberg",
+    "dp": "Bill Butler",
+    "year": 1975
+  },
+  {
+    "id": "2001-bone",
+    "techniques": ["match-cut"],
+    "media": "/media/placeholder.mp4",
+    "source": "2001: A Space Odyssey",
+    "type": "film",
+    "director": "Stanley Kubrick",
+    "year": 1968
+  },
+  {
+    "id": "hot-fuzz-whip",
+    "techniques": ["whip-pan"],
+    "media": "/media/placeholder.mp4",
+    "source": "Hot Fuzz",
+    "type": "film",
+    "director": "Edgar Wright",
+    "year": 2007
+  },
+  {
+    "id": "third-man-dutch",
+    "techniques": ["dutch-angle", "low-angle"],
+    "media": "/media/placeholder.mp4",
+    "source": "The Third Man",
+    "type": "film",
+    "director": "Carol Reed",
+    "year": 1949
+  },
+  {
+    "id": "apocalypse-silhouette",
+    "techniques": ["silhouette"],
+    "media": "/media/placeholder.mp4",
+    "source": "Apocalypse Now",
+    "type": "film",
+    "director": "Francis Ford Coppola",
+    "dp": "Vittorio Storaro",
+    "year": 1979
+  }
+]

@@ -1,0 +1,57 @@
+---
+import { getCollection } from 'astro:content';
+import Base from '../layouts/Base.astro';
+import TechniqueCard from '../components/TechniqueCard.astro';
+import { CATEGORIES } from '../content.config';
+import { CATEGORY_LABELS } from '../data/categories';
+
+const techniques = (await getCollection('techniques')).sort((a, b) => a.data.name.localeCompare(b.data.name));
+const examples = await getCollection('examples');
+const counts = new Map<string, number>();
+for (const e of examples) for (const t of e.data.techniques) counts.set(t.id, (counts.get(t.id) ?? 0) + 1);
+---
+<Base title="Techniques">
+  <h1>Techniques visuelles</h1>
+  <div class="filters">
+    <input id="q" type="search" placeholder="Rechercher (nom, alias, description)…" autocomplete="off" />
+    <div class="cats">
+      <button class="chip active" data-cat="">Tout</button>
+      {CATEGORIES.map((c) => <button class="chip" data-cat={c}>{CATEGORY_LABELS[c]}</button>)}
+    </div>
+  </div>
+  <div class="grid" id="grid">
+    {techniques.map((t) => <TechniqueCard technique={t} count={counts.get(t.id) ?? 0} />)}
+  </div>
+  <p id="empty" class="muted" hidden>Aucune technique ne correspond.</p>
+</Base>
+<style>
+  .filters { display:flex; flex-direction:column; gap:12px; margin-bottom:24px }
+  #q { width:100%; padding:10px 14px; background:var(--card); color:var(--fg); border:1px solid var(--line); border-radius:8px; font-size:16px }
+  .cats { display:flex; flex-wrap:wrap; gap:8px }
+  .cats .chip { background:none; cursor:pointer }
+  .cats .chip.active { color:var(--accent); border-color:var(--accent) }
+</style>
+<script>
+  const q = document.getElementById('q') as HTMLInputElement;
+  const cards = [...document.querySelectorAll<HTMLElement>('#grid .card')];
+  const empty = document.getElementById('empty')!;
+  let cat = '';
+  const apply = () => {
+    const needle = q.value.trim().toLowerCase();
+    let shown = 0;
+    for (const c of cards) {
+      const ok = (!cat || c.dataset.category === cat) && (!needle || c.dataset.search!.includes(needle));
+      c.hidden = !ok;
+      if (ok) shown++;
+    }
+    empty.hidden = shown > 0;
+  };
+  q.addEventListener('input', apply);
+  document.querySelectorAll<HTMLButtonElement>('.cats .chip').forEach((b) =>
+    b.addEventListener('click', () => {
+      cat = b.dataset.cat ?? '';
+      document.querySelectorAll('.cats .chip').forEach((x) => x.classList.toggle('active', x === b));
+      apply();
+    }),
+  );
+</script>
