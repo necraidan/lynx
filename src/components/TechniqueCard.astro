@@ -6,7 +6,7 @@ const { technique: t, count } = Astro.props;
 ---
 <a
   class="card"
-  href={`/technique/${t.id}/`}
+  href={`${import.meta.env.BASE_URL}/technique/${t.id}/`}
   data-category={t.data.category}
   data-search={[t.data.name, ...t.data.aliases, t.data.summary].join(' ').toLowerCase()}
 >

@@ -12,8 +12,8 @@ const { title, description = 'Bibliothèque de techniques visuelles.' } = Astro.
   </head>
   <body>
     <header class="top">
-      <a href="/" class="brand">Lynx</a>
-      <nav><a href="/">Techniques</a></nav>
+      <a href={import.meta.env.BASE_URL + "/"} class="brand">Lynx</a>
+      <nav><a href={import.meta.env.BASE_URL + "/"}>Techniques</a></nav>
     </header>
     <main><slot /></main>
     <footer class="foot">Extraits courts cités à des fins pédagogiques. Toute source est créditée ; retrait sur simple demande.</footer>

@@ -2,13 +2,14 @@
 import type { CollectionEntry } from 'astro:content';
 interface Props { example: CollectionEntry<'examples'>['data'] }
 const { example: e } = Astro.props;
+const withBase = (u?: string) => (u && u.startsWith('/') ? import.meta.env.BASE_URL + u : u);
 const meta = [e.director, e.year].filter(Boolean).join(' · ');
 ---
 <figure class="clip">
-  <video src={e.media} poster={e.poster} muted loop playsinline preload="none"></video>
+  <video src={withBase(e.media)} poster={withBase(e.poster)} muted loop playsinline preload="none"></video>
   <figcaption>
     <strong>{e.source}</strong>
-    {meta && <span class="muted"> — {meta}</span>}
+    {meta && <span class="muted"> : {meta}</span>}
     {e.dp && <div class="muted small">DP : {e.dp}</div>}
   </figcaption>
 </figure>

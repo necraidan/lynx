@@ -2,6 +2,8 @@
 import { getCollection, getEntries, render } from 'astro:content';
 import Base from '../../layouts/Base.astro';
 import Clip from '../../components/Clip.astro';
+import Diagram from '../../components/Diagram.astro';
+import { DIAGRAMS } from '../../data/diagrams';
 import { CATEGORY_LABELS } from '../../data/categories';
 
 export async function getStaticPaths() {
@@ -14,15 +16,19 @@ const { Content } = await render(t);
 const examples = (await getCollection('examples', (e) => e.data.techniques.some((r) => r.id === t.id)))
   .sort((a, b) => (a.data.year ?? 0) - (b.data.year ?? 0));
 const related = await getEntries(t.data.related);
+const diagram = DIAGRAMS[t.id];
 ---
 <Base title={t.data.name} description={t.data.summary}>
-  <p><a href="/" class="muted">← Toutes les techniques</a></p>
+  <p><a href={import.meta.env.BASE_URL + "/"} class="muted">← Toutes les techniques</a></p>
   <header class="head">
-    <span class="chip">{CATEGORY_LABELS[t.data.category]}</span>
-    <h1>{t.data.name}</h1>
-    {t.data.aliases.length > 0 && <p class="muted">Aussi appelé : {t.data.aliases.join(', ')}</p>}
-    <p class="lead">{t.data.summary}</p>
-    <div class="body"><Content /></div>
+    <div class="head-text">
+      <span class="chip">{CATEGORY_LABELS[t.data.category]}</span>
+      <h1>{t.data.name}</h1>
+      {t.data.aliases.length > 0 && <p class="muted">Aussi appelé : {t.data.aliases.join(', ')}</p>}
+      <p class="lead">{t.data.summary}</p>
+      <div class="body"><Content /></div>
+    </div>
+    {diagram && <div class="head-diagram"><Diagram spec={{ ...diagram, id: t.id } as typeof diagram} title={`Schéma : ${t.data.name}`} /><p class="muted small">Schéma de principe</p></div>}
   </header>
 
   <section>
@@ -36,13 +42,16 @@ const related = await getEntries(t.data.related);
     <section>
       <h2>Techniques liées</h2>
       <ul class="related">
-        {related.map((r) => <li><a href={`/technique/${r.id}/`}>{r.data.name}</a> <span class="muted">— {r.data.summary}</span></li>)}
+        {related.map((r) => <li><a href={`${import.meta.env.BASE_URL}/technique/${r.id}/`}>{r.data.name}</a> <span class="muted">: {r.data.summary}</span></li>)}
       </ul>
     </section>
   )}
 </Base>
 <style>
-  .head { margin-bottom:40px }
+  .head { margin-bottom:40px; display:grid; grid-template-columns:minmax(0,1fr) 360px; gap:32px; align-items:start }
+  @media (max-width:800px) { .head { grid-template-columns:1fr } }
+  .head-diagram { position:sticky; top:16px }
+  .small { font-size:12px; text-align:center; margin:6px 0 0 }
   h1 { margin:8px 0 4px; font-size:40px }
   .lead { font-size:20px; max-width:70ch }
   .body { max-width:70ch; color:#c8c8cf }

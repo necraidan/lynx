@@ -1,0 +1,147 @@
+---
+/**
+ * Mini schéma explicatif d'une technique. Rend un SVG 320x180 depuis une spec déclarative
+ * (voir src/data/diagrams.ts). Huit gabarits : topdown, side, frame, sequence, timeline, optics, light, layers.
+ */
+import type { DiagramSpec } from '../data/diagrams';
+interface Props { spec: DiagramSpec; title?: string }
+const { spec, title = 'Schéma' } = Astro.props;
+
+const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;');
+const label = (x: number, y: number, t: string, anchor = 'middle', cls = '') =>
+  `<text x="${x}" y="${y}" text-anchor="${anchor}" class="lbl ${cls}">${esc(t)}</text>`;
+const cam = (x: number, y: number, a = 0, s = 1) =>
+  `<g transform="translate(${x} ${y}) rotate(${a}) scale(${s})" class="cam"><rect x="-12" y="-8" width="20" height="16" rx="2"/><path d="M8 -4 L18 -9 V9 L8 4 Z"/><circle cx="-4" cy="0" r="3" class="hole"/></g>`;
+const subj = (x: number, y: number, s = 1, cls = '') =>
+  `<g transform="translate(${x} ${y}) scale(${s})" class="subj ${cls}"><circle cx="0" cy="-16" r="6"/><path d="M-7 -8 h14 l3 18 h-20 z"/></g>`;
+const dot = (x: number, y: number, r = 8, cls = '') => `<circle cx="${x}" cy="${y}" r="${r}" class="subj ${cls}"/>`;
+const arrow = (d: string, cls = '') => `<path d="${d}" class="arrow ${cls}" marker-end="url(#ah)"/>`;
+const fov = (x1: number, y1: number, x2: number, y2: number, spread = 10) => {
+  const dx = x2 - x1, dy = y2 - y1, L = Math.hypot(dx, dy) || 1, nx = -dy / L * spread, ny = dx / L * spread;
+  return `<path d="M${x1} ${y1} L${x2 + nx} ${y2 + ny} M${x1} ${y1} L${x2 - nx} ${y2 - ny}" class="fov"/>`;
+};
+const frameRect = (x: number, y: number, w: number, h: number, cls = '') => `<rect x="${x}" y="${y}" width="${w}" height="${h}" class="frame ${cls}"/>`;
+
+function render(sp: DiagramSpec): string {
+  switch (sp.kind) {
+    case 'topdown': {
+      const sx = sp.subject?.[0] ?? 160, sy = sp.subject?.[1] ?? 90;
+      let g = `<rect x="0" y="0" width="320" height="180" class="floor"/>` + label(12, 172, 'vue de dessus', 'start', 'dim');
+      if (sp.subject !== null) g += subj(sx, sy, 1.1) + label(sx, sy + 26, sp.subjectLabel ?? 'sujet');
+      for (const c of sp.cams ?? []) {
+        g += cam(c[0], c[1], c[2] ?? 0, c[3] ?? 1);
+        if (sp.subject !== null && !sp.noFov) g += fov(c[0], c[1], sx, sy, 8);
+      }
+      for (const m of sp.moves ?? []) g += arrow(m.d, m.cls ?? '') + (m.label ? label(m.x, m.y, m.label, m.anchor ?? 'middle') : '');
+      if (sp.camLabel) g += label(sp.camLabel[0], sp.camLabel[1], sp.camLabel[2], sp.camLabel[3] ?? 'middle');
+      return g + (sp.extra ?? '');
+    }
+    case 'side': {
+      const sx = sp.subject?.[0] ?? 230;
+      let g = `<line x1="0" y1="150" x2="320" y2="150" class="ground"/>` + label(12, 172, 'vue de côté', 'start', 'dim');
+      if (sp.subject !== null) g += subj(sx, 148, 1.6) + label(sx, 168, sp.subjectLabel ?? 'sujet');
+      for (const c of sp.cams ?? []) {
+        g += cam(c[0], c[1], c[2] ?? 0, c[3] ?? 1);
+        if (sp.subject !== null && !sp.noFov) g += fov(c[0], c[1], sp.target?.[0] ?? sx, sp.target?.[1] ?? 122, 8);
+      }
+      for (const m of sp.moves ?? []) g += arrow(m.d, m.cls ?? '') + (m.label ? label(m.x, m.y, m.label, m.anchor ?? 'middle') : '');
+      if (sp.camLabel) g += label(sp.camLabel[0], sp.camLabel[1], sp.camLabel[2], sp.camLabel[3] ?? 'middle');
+      return g + (sp.extra ?? '');
+    }
+    case 'frame': {
+      const t = sp.tilt ?? 0;
+      let inner = '';
+      for (const f of sp.figures ?? []) inner += subj(f[0], f[1], f[2] ?? 1, f[3] ?? '');
+      if (sp.horizon !== undefined) inner += `<line x1="-40" y1="${sp.horizon}" x2="360" y2="${sp.horizon}" class="horizon"/>`;
+      inner += sp.inner ?? '';
+      let g = `<g transform="rotate(${t} 160 90)"><clipPath id="c-${sp.id ?? 'f'}"><rect x="40" y="22" width="240" height="135"/></clipPath><g clip-path="url(#c-${sp.id ?? 'f'})">${inner}</g>${frameRect(40, 22, 240, 135)}</g>`;
+      g += label(160, 172, sp.caption ?? 'cadre', 'middle', 'dim');
+      return g + (sp.extra ?? '');
+    }
+    case 'sequence': {
+      const n = sp.frames.length, w = Math.min(90, (300 - 12 * (n - 1)) / n), h = w * 9 / 16, x0 = (320 - (n * w + 12 * (n - 1))) / 2, y0 = 70 - h / 2;
+      let g = '';
+      sp.frames.forEach((f, i) => {
+        const x = x0 + i * (w + 12);
+        g += `<g transform="translate(${x} ${y0})"><clipPath id="s-${sp.id ?? 'q'}-${i}"><rect width="${w}" height="${h}"/></clipPath><g clip-path="url(#s-${sp.id ?? 'q'}-${i})">${f.inner ?? ''}</g>${frameRect(0, 0, w, h)}</g>`;
+        if (f.label) g += label(x + w / 2, y0 + h + 16, f.label);
+        if (i < n - 1) g += `<path d="M${x + w + 2} ${y0 + h / 2} l8 0" class="arrow" marker-end="url(#ah)"/>` + (sp.cutLabel !== undefined && i === 0 ? label(x + w + 6, y0 - 6, sp.cutLabel) : '');
+      });
+      return g + label(160, 172, sp.caption ?? 'succession de plans', 'middle', 'dim') + (sp.extra ?? '');
+    }
+    case 'timeline': {
+      const cells = sp.pattern.split(''), w = 300 / cells.length;
+      let g = label(12, 40, sp.top ?? 'tournage', 'start', 'dim') + label(12, 130, sp.bottom ?? 'lecture', 'start', 'dim');
+      cells.forEach((c, i) => {
+        const x = 10 + i * w;
+        if (c !== '.') g += `<rect x="${x + 1}" y="48" width="${w - 2}" height="24" class="cell ${c === '=' ? 'held' : c === 'r' ? 'rev' : ''}"/>`;
+      });
+      (sp.pattern2 ?? sp.pattern).split('').forEach((c, i, arr) => {
+        const w2 = 300 / arr.length, x = 10 + i * w2;
+        if (c !== '.') g += `<rect x="${x + 1}" y="90" width="${w2 - 2}" height="24" class="cell ${c === '=' ? 'held' : c === 'r' ? 'rev' : ''}"/>`;
+      });
+      g += arrow('M10 160 L300 160') + label(300, 172, 'temps', 'end', 'dim');
+      return g + (sp.extra ?? '');
+    }
+    case 'optics': {
+      let g = cam(30, 90, 0, 1.3) + label(30, 120, 'caméra');
+      const planes = sp.planes ?? [];
+      for (const p of planes) g += subj(p[0], 100, 1.3, p[1] === 'sharp' ? 'sharp' : 'blur') + label(p[0], 128, p[1] === 'sharp' ? 'net' : 'flou');
+      if (sp.focusPlane !== undefined) g += `<line x1="${sp.focusPlane}" y1="40" x2="${sp.focusPlane}" y2="140" class="focus"/>`;
+      for (const m of sp.moves ?? []) g += arrow(m.d, m.cls ?? '') + (m.label ? label(m.x, m.y, m.label, m.anchor ?? 'middle') : '');
+      return g + label(160, 172, sp.caption ?? 'optique', 'middle', 'dim') + (sp.extra ?? '');
+    }
+    case 'light': {
+      let g = '';
+      if (sp.source) g += `<g transform="translate(${sp.source[0]} ${sp.source[1]})" class="light"><circle r="9"/><path d="M-16 0h-8M16 0h8M0 -16v-8M0 16v8M-11 -11l-6 -6M11 11l6 6M11 -11l6 -6M-11 11l-6 6"/></g>` + label(sp.source[0], sp.source[1] + 30, sp.sourceLabel ?? 'lumière');
+      g += sp.inner ?? '';
+      return g + label(160, 172, sp.caption ?? 'lumière', 'middle', 'dim') + (sp.extra ?? '');
+    }
+    case 'layers': {
+      return (sp.inner ?? '') + label(160, 172, sp.caption ?? 'composition', 'middle', 'dim') + (sp.extra ?? '');
+    }
+  }
+}
+const svg = render(spec);
+---
+<figure class="diagram">
+  <svg viewBox="0 0 320 180" role="img" aria-label={title} set:html={`<defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="var(--accent)"/></marker></defs>${svg}`} />
+</figure>
+<style is:global>
+  .diagram { margin:0; background:var(--card); border:1px solid var(--line); border-radius:8px; padding:8px }
+  .diagram svg { width:100%; height:auto; display:block; font:11px system-ui, sans-serif }
+  .diagram .lbl { fill:var(--fg); font-size:11px }
+  .diagram .lbl.dim { fill:var(--muted); font-size:10px; text-transform:uppercase; letter-spacing:.06em }
+  .diagram .cam rect, .diagram .cam path { fill:var(--accent) }
+  .diagram .cam .hole { fill:var(--card) }
+  .diagram .subj { fill:#9ecbff }
+  .diagram .subj.ghost { fill:#9ecbff; opacity:.35 }
+  .diagram .subj.blur { filter:blur(2px); opacity:.6 }
+  .diagram .subj.dark { fill:#111 }
+  .diagram .subj.warm { fill:#ff8c69 }
+  .diagram .arrow { fill:none; stroke:var(--accent); stroke-width:2 }
+  .diagram .arrow.dashed { stroke-dasharray:4 4 }
+  .diagram .fov { fill:none; stroke:var(--accent); stroke-width:1; stroke-dasharray:3 3; opacity:.6 }
+  .diagram .frame { fill:none; stroke:var(--fg); stroke-width:1.5 }
+  .diagram .frame.thin { stroke:var(--muted); stroke-width:1 }
+  .diagram .floor { fill:none }
+  .diagram .ground { stroke:var(--muted); stroke-width:1.5 }
+  .diagram .horizon { stroke:var(--muted); stroke-dasharray:4 4 }
+  .diagram .cell { fill:#9ecbff }
+  .diagram .cell.held { fill:var(--accent) }
+  .diagram .cell.rev { fill:#ff8c69 }
+  .diagram .focus { stroke:var(--accent); stroke-dasharray:3 3 }
+  .diagram .light circle { fill:var(--accent) }
+  .diagram .light path { stroke:var(--accent); stroke-width:2 }
+  .diagram .beam { fill:var(--accent); opacity:.18 }
+  .diagram .shadow { fill:#000; opacity:.55 }
+  .diagram .glow { fill:var(--accent); opacity:.25; filter:blur(6px) }
+  .diagram .fill-dark { fill:#000 }
+  .diagram .fill-dim { fill:#2a2a30 }
+  .diagram .fill-a { fill:#9ecbff; opacity:.5 }
+  .diagram .fill-b { fill:#ff8c69; opacity:.5 }
+  .diagram .fill-c { fill:#b8f0a0; opacity:.5 }
+  .diagram .stroke { fill:none; stroke:var(--fg); stroke-width:1.5 }
+  .diagram .stroke-a { fill:none; stroke:var(--accent); stroke-width:1.5 }
+  .diagram .grid { stroke:var(--muted); stroke-width:.5; opacity:.5 }
+</style>
